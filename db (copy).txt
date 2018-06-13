@@ -1,0 +1,4 @@
+Carholder name|Address|Phone|Brand|Color
+Ivanov Ivan|Moscow|89282281488|VAZ 2107|Brown
+Sidorov Sidr|Tula|89184358745|Opel Astra|White
+Igor Nikolaev|St. Petersburg|89196871495|Honda Acord|Green
