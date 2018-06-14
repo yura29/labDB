@@ -4,16 +4,15 @@
 //В случае успеха возвращает 0, иначе 1
 int readRow(database *db, row *dst)
 {
-    char *line = NULL;
+    char line[256];
     char *tmp;
     int del_pos = -1;
     size_t len = 0;
     //Читаем строку
-    int status = getline(&line, &len, db->content);
+    char *status = fgets(line, 256, db->content);
 
     //Проверяем пустая она или нет
-    if(status == -1) return 1;
-    if(strlen(line) == 0) return 1;
+    if(status == NULL) return 1;
 
     //Считаем количество столбцов
     char *p;

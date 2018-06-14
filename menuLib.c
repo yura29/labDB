@@ -5,23 +5,22 @@ void initMenu(database *db){
 
     char input[256];
     int selected = 0;
-    int status = 0;
     int menu_items_size;
 
     if(checkConnection(db) != 0)
     {
-        printf("Подключение к БД\n");
+        printf("Connect to DB\n");
         dbConnect(db);
     }
 
     menu_item menu_items[] = {
-                              {"Вывести все запимси", dbPrint},
-                              {"Добавить запись", dbAdd},
-                              {"Удалить запись по ID", dbRemove},
-                              {"Поиск записи по полю", dbSearch},
-                              {"Редактирование записи", dbEdit},
-                              {"Сортрировка данных по полю", dbSort},
-                              {"Переподключиться к бд", dbConnect}
+                              {"Show all rows", dbPrint},
+                              {"Add row", dbAdd},
+                              {"Remove row by number", dbRemove},
+                              {"Search row", dbSearch},
+                              {"Edit row", dbEdit},
+                              {"Sort rows", dbSort},
+                              {"Reconnect", dbConnect}
                             };
 
     menu_items_size = sizeof(menu_items) / sizeof(menu_items[0]);
@@ -32,11 +31,15 @@ void initMenu(database *db){
     }
 
     while(1){
-        printf("Введите номер пунка меню: ");
-        status = scanf(" %s", &input);
+        printf("Enter menu item number: ");
+        char *status = fgets(input, 256, stdin);
+
+		if ((strlen(input) > 0) && (input[strlen(input) - 1] == '\n'))
+			input[strlen(input) - 1] = '\0';
+
         selected = atoi(input);
-        if(status == 0 || selected > menu_items_size || selected < 1){
-            printf("Неверное значение! Попробуйте ввести другое\n");
+        if(status == NULL || selected > menu_items_size || selected < 1){
+            printf("Item not found! Try another\n");
             continue;
         }
 
@@ -51,11 +54,15 @@ void dbConnect(database *db)
 
     while(1)
     {
-        printf("Укажите адрес файла БД: ");
-        scanf("%s", path);
+        printf("Enter path to DB file: ");
+		fgets(path, 256, stdin);
+
+		if ((strlen(path) > 0) && (path[strlen(path) - 1] == '\n'))
+			path[strlen(path) - 1] = '\0';
+
         if ((db->content = fopen(path, "r+")) == NULL) 
         {
-            printf("Невозможно подключиться. Попробуйте другой путь\n");
+            printf("Unnable to connect. Try another path\n");
             continue;
         }
         
@@ -64,7 +71,7 @@ void dbConnect(database *db)
         break;
     }
     readRow(db, &db->desc);
-    printf("\nПодключение выполненно успешно\n");
+    printf("\nConnection successful\n");
     initMenu(db);
 }
 
@@ -72,7 +79,7 @@ void dbPrint(database *db)
 {
     if(checkConnection(db) != 0)
     {
-        printf("Сначала необходимо подключиться к бд\n");
+        printf("Connect to DB first\n");
         initMenu(db);
     }
 
@@ -84,6 +91,7 @@ void dbPrint(database *db)
     {
         dbPrintRow(dst, 0);
     }
+	printf("\n\n");
 
     initMenu(db);
 }
@@ -92,42 +100,39 @@ void dbAdd(database *db)
 {
     if(checkConnection(db) != 0)
     {
-        printf("Сначала необходимо подключиться к бд\n");
+        printf("Connect to DB first\n");
         initMenu(db);
     }
 
-    printf("Добавление новой записи\n");
+    printf("Add new row\n");
 
     char input[256];
-    char *fields[db->desc.fields_num];
+    char **fields = malloc(db->desc.fields_num * sizeof(char));
 
-    getchar();
     for(int i = 0; i < db->desc.fields_num; ++i)
     {
-        printf("Введите поле \"%s\": ", db->desc.fields[i]);
+        printf("Enter field \"%s\": ", db->desc.fields[i]);
         fgets(input, 256, stdin);
 
         if ((strlen(input) > 0) && (input[strlen (input) - 1] == '\n'))
         input[strlen (input) - 1] = '\0';
 
-        fields[i] = malloc(sizeof(char) * strlen(input));
+        fields[i] = malloc(sizeof(char) * (strlen(input) + 256));
         strcpy(fields[i], input);
     }
 
     row *r = malloc(sizeof(row));
-    r->fields = malloc(sizeof(fields));
+    r->fields = malloc(sizeof(char*) * db->desc.fields_num);
     for(int i = 0; i < db->desc.fields_num; ++i)
     {
-        r->fields[i] = malloc(sizeof(fields[i]));
+        r->fields[i] = malloc(sizeof(char) * (strlen(fields[i] + 1)));
         strcpy(r->fields[i], fields[i]);
     }
     r->fields_num = db->desc.fields_num;
 
     dbWrite(db, *r);
-    
-    for(int i = 0; i < db->desc.fields_num; ++i) free(fields[i]);
 
-    printf("Запись добавлена\n");
+    printf("Row added\n");
     initMenu(db);
 }
 
@@ -135,14 +140,18 @@ void dbRemove(database *db)
 {
     if(checkConnection(db) != 0)
     {
-        printf("Сначала необходимо подключиться к бд\n");
+        printf("Connect to DB first\n");
         initMenu(db);
     }
 
     char input[256];
     int line_number;
-    printf("Укажите номер записи для удаления: ");
-    scanf(" %s", &input);
+    printf("Enter row number to delete: ");
+	fgets(input, 256, stdin);
+
+	if ((strlen(input) > 0) && (input[strlen(input) - 1] == '\n'))
+		input[strlen(input) - 1] = '\0';
+
     line_number = atoi(input) + 1;
 
     dbRemoveRow(db, line_number);
@@ -154,13 +163,16 @@ void dbSearch(database *db)
 {
     if(checkConnection(db) != 0)
     {
-        printf("Сначала необходимо подключиться к бд\n");
+        printf("Connect to DB first\n");
         initMenu(db);
     }
 
     char input[256];
-    printf("Введите поле для поиска: ");
-    scanf(" %s", &input);
+    printf("Enter search field: ");
+	fgets(input, 256, stdin);
+
+	if ((strlen(input) > 0) && (input[strlen(input) - 1] == '\n'))
+		input[strlen(input) - 1] = '\0';
 
     int target_field_num = -1;
     for(int i = 0; i < db->desc.fields_num; ++i)
@@ -174,12 +186,15 @@ void dbSearch(database *db)
 
     if(target_field_num == -1)
     {
-        printf("Заданное поле не найдено. Попробуйте ввести другое\n");
+        printf("Field not found. Try another field\n");
         dbSearch(db);
     }
 
-    printf("Введите фразу для поиска: ");
-    scanf(" %s", &input);
+    printf("Enter search phrase: ");
+	fgets(input, 256, stdin);
+
+	if ((strlen(input) > 0) && (input[strlen(input) - 1] == '\n'))
+		input[strlen(input) - 1] = '\0';
 
     row tmp;
     int row_count = 0;
@@ -200,23 +215,24 @@ void dbEdit(database *db)
 {
     if(checkConnection(db) != 0)
     {
-        printf("Сначала необходимо подключиться к бд\n");
+        printf("Connect to DB first\n");
         initMenu(db);
     }
 
     char input[256];
     int line_number = -1;
-    printf("Введите номер строки для редактирования: ");
-    scanf(" %s", &input);
+    printf("Enter line number for edit: ");
+	fgets(input, 256, stdin);
+	if ((strlen(input) > 0) && (input[strlen(input) - 1] == '\n'))
+		input[strlen(input) - 1] = '\0';
 
     line_number = atoi(input) + 1;
 
-    char *fields[db->desc.fields_num];
+    char **fields = malloc(db->desc.fields_num * sizeof(char));
 
-    getchar();
     for(int i = 0; i < db->desc.fields_num; ++i)
     {
-        printf("Введите поле \"%s\": ", db->desc.fields[i]);
+        printf("Enter field \"%s\": ", db->desc.fields[i]);
         fgets(input, 256, stdin);
 
         if ((strlen(input) > 0) && (input[strlen (input) - 1] == '\n'))
@@ -226,10 +242,10 @@ void dbEdit(database *db)
     }
 
     row *r = malloc(sizeof(row));
-    r->fields = malloc(sizeof(fields));
+    r->fields = malloc(sizeof(char*) * db->desc.fields_num);
     for(int i = 0; i < db->desc.fields_num; ++i)
     {
-        r->fields[i] = malloc(sizeof(fields[i]));
+        r->fields[i] = malloc(sizeof(char) * (strlen(fields[i] + 1)));
         strcpy(r->fields[i], fields[i]);
     }
     r->fields_num = db->desc.fields_num;
@@ -244,13 +260,12 @@ void dbSort(database *db)
 {
     if(checkConnection(db) != 0)
     {
-        printf("Сначала необходимо подключиться к бд\n");
+        printf("Connect to DB first\n");
         initMenu(db);
     }
 
     char input[256];
-    printf("Введите поле для сортировки: ");
-    getchar();
+    printf("Enter sort field: ");
     fgets(input, 256, stdin);
 
     if ((strlen(input) > 0) && (input[strlen (input) - 1] == '\n'))
@@ -268,7 +283,7 @@ void dbSort(database *db)
 
     if(target_field_num == -1)
     {
-        printf("Заданное поле не найдено. Попробуйте ввести другое\n");
+        printf("Field not found. Try another\n");
         dbSort(db);
     }
 
